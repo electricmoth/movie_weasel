@@ -15,28 +15,35 @@ class Film:
 
     def save_data(self):
         new_data = {
-                "title": self.title,
+                self.title: {
                 "year": self.year,
                 "director": self.director,
                 "rating": self.rating,
                 "comments": self.comments,
                 }
+            }
         try:
-            with open('./films.json', 'r') as file:
-                # try to read old data
+            with open('films.json', 'r') as file:
+                # try to read existing data
                 data = json.load(file)
+
         except (FileNotFoundError, json.JSONDecodeError):
-            # file not found
-            print(f"[-] no existing data file found.")
-            data = new_data
+            # file not found || empty file
+            print(f"[-] no existing data file found. creating new file.")
+            # write new data only
+            with open('films.json', 'w') as file:
+                json.dump(new_data, file, indent=4)
+
         else:
-                # update with new data
-                data.update(new_data)
-        finally:
-            # either way:
-            with open('./films.json', 'w') as file:
-                # save data
+            # if existing data found, add new data
+            print("found existing data:")
+            print(data)
+            data.update(new_data)
+            print("updated data is:")
+            print(data)
+            with open('films.json', 'w') as file:
                 json.dump(data, file, indent=4)
+        finally:
             print("[+] new data saved.")
 
 
