@@ -7,11 +7,12 @@ from ttkbootstrap.dialogs import MessageDialog
 
 
 class Film:
-    def __init__(self, title, year, director, rating, comments):
+    def __init__(self, title, year, director, rating, watched, comments):
         self.title = title
         self.year = year
         self.director = director
         self.rating = rating
+        self.watched = watched
         self.comments = comments
 
     def save_data(self):
@@ -20,6 +21,7 @@ class Film:
                 "year": self.year,
                 "director": self.director,
                 "rating": self.rating,
+                "watched": self.watched,
                 "comments": self.comments,
                 }
             }
@@ -37,11 +39,7 @@ class Film:
 
         else:
             # if existing data found, add new data
-            print("found existing data:")
-            print(data)
             data.update(new_data)
-            print("updated data is:")
-            print(data)
             with open('films.json', 'w') as file:
                 json.dump(data, file, indent=4)
         finally:
@@ -53,16 +51,18 @@ def submit():
     title = title_input.get()
     year = year_input.get()
     director = director_input.get()
-    rating = rating_input.get()
     comments = comments_input.get()
-    film = Film(title=title, year=year, director=director, rating=rating, comments=comments)
+    watched = watched_input.instate(['selected'])
+    rating = rating_var.get()
+    film = Film(title=title, year=year, director=director, rating=rating, watched=watched, comments=comments)
     film.save_data()
 
     # clear user inputs after submitting data
     title_input.delete(0, tk.END)
     year_input.delete(0, tk.END)
     director_input.delete(0, tk.END)
-    rating_input.delete(0, tk.END)
+    # rating_input.invoke() #TODO set 0
+    watched_input.invoke() # TODO TEST
     comments_input.delete(0, tk.END)
 
 
@@ -95,11 +95,15 @@ director_label.grid(column=0, row=3, pady=10)
 
 # rating label
 rating_label = tk.Label(text="Rating", font=("Calibri", 14,))
-rating_label.grid(column=0, row=4, pady=10)
+rating_label.grid(column=0, row=5, pady=10)
+
+# watched label
+watched_label = tk.Label(text="Watched", font=("Calibri", 14,))
+watched_label.grid(column=0, row=4, pady=10)
 
 # comments label
 comments_label = tk.Label(text="Comments", font=("Calibri", 14))
-comments_label.grid(column=0, row=5, pady=10)
+comments_label.grid(column=0, row=6, pady=10, padx=20)
 
 # -------- INPUTS ------------------
 
@@ -116,22 +120,29 @@ year_input.grid(column=2, row=2, pady=10)
 director_input = ttk.Entry(width=20)
 director_input.grid(column=2, row=3, pady=10)
 
-# rating dropdown  # TODO dropdown
-rating_input = ttk.Entry(width=20)
-rating_input.grid(column=2, row=4, pady=10)
+
+# rating dropdown
+ratings = [1, 2, 3, 4, 5]
+rating_var = tk.IntVar(window)
+rating_input = tk.OptionMenu(window, rating_var, *ratings)
+rating_input.grid(column=2, row=5, pady=10)
+
+# watched toggle
+watched_input = ttk.Checkbutton(bootstyle="success-square-toggle")
+watched_input.grid(column=2, row=4)
 
 # comments textfield
 comments_input = ttk.Entry(width=30)
-comments_input.grid(column=2, row=5, pady=10)
+comments_input.grid(column=2, row=6, pady=10)
 
 # submit button
 button = ttk.Button(text="Submit", command=submit, bootstyle="info")
-button.grid(column=1, row=6, pady=10, columnspan=2, sticky='EW')
+button.grid(column=1, row=7, pady=10, padx=20, columnspan=2, sticky='EW')
 
 # ---------- SEARCH -------------------------
 
 sep = ttk.Separator(window, orient='horizontal', style="info")
-sep.grid(row=7, columnspan=3, pady=20, sticky='EW')
+sep.grid(row=8, columnspan=3, pady=20, padx=20, sticky='EW')
 
 
 def search():
@@ -151,8 +162,6 @@ def search():
 
 def display_search_results(data: dict, title: str):
     """Creates a pop-up box showing found info"""
-    print(data)
-    print(data.keys())
     message = f"""
     title: {title}
     year: {data["year"]}
@@ -169,11 +178,11 @@ def display_search_results(data: dict, title: str):
 
 # search button
 search_button = ttk.Button(text="search", command=search, bootstyle="info-outline")
-search_button.grid(column=1, row=8, pady=10, padx=20)
+search_button.grid(column=1, row=9, pady=10)
 
 # search box
 search_input = ttk.Entry(width=20)
-search_input.grid(column=0, row=8, pady=10, padx=20)
+search_input.grid(column=0, row=9, pady=10, padx=20)
 
 #-------------------------------
 
