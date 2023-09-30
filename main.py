@@ -3,6 +3,7 @@ import tkinter as tk
 # from tkinter import ttk
 # override above w bootstrap for styling
 import ttkbootstrap as ttk
+from ttkbootstrap.dialogs import MessageDialog
 
 
 class Film:
@@ -54,14 +55,10 @@ def submit():
     director = director_input.get()
     rating = rating_input.get()
     comments = comments_input.get()
-    print(title)
-    print(year)
-    print(director)
-    print(rating)
-    print(comments)
     film = Film(title=title, year=year, director=director, rating=rating, comments=comments)
     film.save_data()
 
+    # clear user inputs after submitting data
     title_input.delete(0, tk.END)
     year_input.delete(0, tk.END)
     director_input.delete(0, tk.END)
@@ -70,73 +67,115 @@ def submit():
 
 
 # main window
-window = tk.Tk()
-# window = ttk.Window()
+# window = tk.Tk()
+window = ttk.Window(themename="vapor")  # themes: darkly, journal, cyborg,
 window.title("movie weasel")
-window.minsize(width=500, height=300)
-# window.config(padx=100, pady=200)
+# window.position_center()
+window.place_window_center()
+# window.geometry('800x500')
 
 # ---------- LABELS -------------
 
 # main label
-main_label = ttk.Label(text="add new film", font=("Calibri", 24, "bold"))
-main_label.grid(column=0, row=0)
-# main_label.config(padx=50, pady=50)
+main_label = ttk.Label(text="Add New Film", font=("Calibri", 24, "bold"))
+main_label.grid(column=1, row=0, pady=10)
 
 # title label
-title_label = ttk.Label(master=window, text="film title", font='Calibri 14')
-title_label.grid(column=0, row=1)
-# title_label.config(padx=20, pady=20)
+title_label = ttk.Label(master=window, text="Film Title", font='Calibri 14')
+title_label.grid(column=0, row=1, pady=10)
+title_label.focus_set()
 
 # year label
-year_label = ttk.Label(master=window, text="year released", font='Calibri 14')
-year_label.grid(column=0, row=2)
-# year_label.config(padx=20, pady=20)
+year_label = ttk.Label(master=window, text="Year Released", font='Calibri 14')
+year_label.grid(column=0, row=2, pady=10)
 
 # director label
-director_label = tk.Label(text="director", font="Calibri 14")
-director_label.grid(column=0, row=3)
-# director_label.config(padx=20, pady=20)
+director_label = tk.Label(text="Director", font="Calibri 14")
+director_label.grid(column=0, row=3, pady=10)
 
 # rating label
-rating_label = tk.Label(text="rating", font=("Calibri", 14,))
-rating_label.grid(column=0, row=4)
-# rating_label.config(padx=20, pady=20)
+rating_label = tk.Label(text="Rating", font=("Calibri", 14,))
+rating_label.grid(column=0, row=4, pady=10)
 
 # comments label
-comments_label = tk.Label(text="comments", font=("Calibri", 14))
-comments_label.grid(column=0, row=5)
-# comments_label.config(padx=20, pady=20)
+comments_label = tk.Label(text="Comments", font=("Calibri", 14))
+comments_label.grid(column=0, row=5, pady=10)
 
 # -------- INPUTS ------------------
 
 #title entry
-title_input = tk.Entry(width=20)
-title_input.grid(column=2, row=1)
+title_input = ttk.Entry(width=20)
+title_input.grid(column=2, row=1, pady=10)
+title_input.focus()
 
 # year entry
-year_input = tk.Entry(width=20)
-year_input.grid(column=2, row=2)
+year_input = ttk.Entry(width=20)
+year_input.grid(column=2, row=2, pady=10)
 
 # director entry
-director_input = tk.Entry(width=20)
-director_input.grid(column=2, row=3)
+director_input = ttk.Entry(width=20)
+director_input.grid(column=2, row=3, pady=10)
 
 # rating dropdown  # TODO dropdown
-rating_input = tk.Entry(width=20)
-rating_input.grid(column=2, row=4)
+rating_input = ttk.Entry(width=20)
+rating_input.grid(column=2, row=4, pady=10)
 
 # comments textfield
-comments_input = tk.Entry(width=50)
-comments_input.grid(column=2, row=5)
+comments_input = ttk.Entry(width=30)
+comments_input.grid(column=2, row=5, pady=10)
 
 # submit button
-button = tk.Button(text="submit", command=submit)
-button.grid(column=1, row=6)
+button = ttk.Button(text="Submit", command=submit, bootstyle="info")
+button.grid(column=1, row=6, pady=10, columnspan=2, sticky='EW')
+
+# ---------- SEARCH -------------------------
+
+sep = ttk.Separator(window, orient='horizontal', style="info")
+sep.grid(row=7, columnspan=3, pady=20, sticky='EW')
 
 
+def search():
+    """searches json file for gives search-term"""
+    search_term = search_input.get()
+    print(f"[+] Searching for {search_term}...")
+    search_input.delete(0, tk.END)
+    try:
+        with open('films.json', 'r') as file:
+            data = json.load(file)
+            for i in data:
+                if i in search_term:
+                    display_search_results(data=data[i], title=search_term)
+    except FileNotFoundError:
+        print("[-] No previous data found.")
 
 
+def display_search_results(data: dict, title: str):
+    """Creates a pop-up box showing found info"""
+    print(data)
+    print(data.keys())
+    message = f"""
+    title: {title}
+    year: {data["year"]}
+    director: {data["director"]}
+    comments: {data["comments"]}
+    """
+    msgbox = MessageDialog(
+            message=message,
+            title="Found!",
+            buttons=["OK:success"],
+            padding=(50,50))
+    msgbox.show()
+
+
+# search button
+search_button = ttk.Button(text="search", command=search, bootstyle="info-outline")
+search_button.grid(column=1, row=8, pady=10, padx=20)
+
+# search box
+search_input = ttk.Entry(width=20)
+search_input.grid(column=0, row=8, pady=10, padx=20)
+
+#-------------------------------
 
 # keep window open
 window.mainloop()
