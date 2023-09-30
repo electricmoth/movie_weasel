@@ -126,7 +126,7 @@ class Interface(ttk.Window):
 
         # search box
         self.search_input = ttk.Entry(width=20)
-        self.search_input.grid(column=0, row=9, pady=10, padx=20, stciky='ew')
+        self.search_input.grid(column=0, row=9, pady=10, padx=20, sticky='ew')
 
 
         self.sep = ttk.Separator(self, orient='horizontal', style="info")
