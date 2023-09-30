@@ -133,11 +133,11 @@ watched_input.grid(column=2, row=4)
 
 # comments textfield
 comments_input = ttk.Entry(width=30)
-comments_input.grid(column=2, row=6, pady=10)
+comments_input.grid(column=2, row=6, pady=10, padx=20)
 
 # submit button
 button = ttk.Button(text="Submit", command=submit, bootstyle="info")
-button.grid(column=1, row=7, pady=10, padx=20, columnspan=2, sticky='EW')
+button.grid(column=1, row=7, pady=10, padx=20, sticky='EW')
 
 # ---------- SEARCH -------------------------
 
@@ -178,11 +178,11 @@ def display_search_results(data: dict, title: str):
 
 # search button
 search_button = ttk.Button(text="search", command=search, bootstyle="info-outline")
-search_button.grid(column=1, row=9, pady=10)
+search_button.grid(column=1, row=9, pady=10, sticky='w')
 
 # search box
-search_input = ttk.Entry(width=20)
-search_input.grid(column=0, row=9, pady=10, padx=20)
+search_input = ttk.Entry(width=30)
+search_input.grid(column=0, row=9, pady=10, padx=20, sticky='ew')
 
 #-------------------------------
 
