@@ -114,11 +114,11 @@ class Interface(ttk.Window):
 
         # comments textfield
         self.comments_input = ttk.Entry(width=30)
-        self.comments_input.grid(column=2, row=6, pady=10)
+        self.comments_input.grid(column=2, row=6, pady=10, padx=20)
 
         # submit button
         self.submit_button = ttk.Button(text="Submit", command=self.submit, bootstyle="info")
-        self.submit_button.grid(column=1, row=7, pady=10, padx=20, columnspan=2, sticky='EW')
+        self.submit_button.grid(column=1, row=7, pady=10, padx=20, sticky='EW')
 
         # search button
         self.search_button = ttk.Button(text="search", command=self.search, bootstyle="info-outline")
@@ -126,7 +126,7 @@ class Interface(ttk.Window):
 
         # search box
         self.search_input = ttk.Entry(width=20)
-        self.search_input.grid(column=0, row=9, pady=10, padx=20)
+        self.search_input.grid(column=0, row=9, pady=10, padx=20, stciky='ew')
 
 
         self.sep = ttk.Separator(self, orient='horizontal', style="info")
