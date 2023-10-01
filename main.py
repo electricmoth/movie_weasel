@@ -3,8 +3,6 @@
 # a user can record their rating and comments about a movie for later review.
 # a user can perform queries to view previously-entered data.
 
-import json
-
 # sql database setup
 import sqlite3
 
@@ -22,39 +20,18 @@ class Film:
         self.year:str = year
         self.director:str = director
         self.rating: int = rating
-        self.watched: int = int(watched)  # convert to int for sqlite3
+        self.watched: int = int(watched)  # convert to int for sqlite3 which does not support boolean values
         self.comments:str = comments
 
-    def save_data(self):
-        """save user entered data"""
-        new_data = {
-                self.title: {
-                "year": self.year,
-                "director": self.director,
-                "rating": self.rating,
-                "watched": self.watched,
-                "comments": self.comments,
-                }
-            }
-        try:
-            with open('films.json', 'r') as file:
-                # try to read existing data
-                data = json.load(file)
-
-        # if file not found || data file is empty
-        except (FileNotFoundError, json.JSONDecodeError):
-            print(f"[-] no existing data file found. creating new file.")
-            # write new data only
-            with open('films.json', 'w') as file:
-                json.dump(new_data, file, indent=4)
-
-        else:
-            # if existing data found, add new data
-            data.update(new_data)
-            with open('films.json', 'w') as file:
-                json.dump(data, file, indent=4)
-        finally:
-            print("[+] new data saved.")
+    def __repr__(self):
+        return f"""
+        title: {self.title}
+        year: {self.year}
+        director: {self.director}
+        watched: {self.watched}
+        rating: {self.rating}
+        comments: {self.comments}
+        """
 
 
 # this is the template for the GUI interface the user interacts with
@@ -64,7 +41,7 @@ class Interface(ttk.Window):
         # use "vapor" colorscheme
         super().__init__(themename="vapor")  # more themes: darkly, journal, cyborg,
         # set title of window
-        self.title("movie weasel")
+        self.title("Movie Weasel")
         # main "Add New Film" label
         self.main_label = ttk.Label(text="Add New Film", font=("Calibri", 24, "bold"))
         self.main_label.grid(column=1, row=0, pady=10)
@@ -103,6 +80,8 @@ class Interface(ttk.Window):
         # rating can be 1-5
         self.ratings = [1, 2, 3, 4, 5]
         self.rating_var = tk.IntVar()
+        # ratings dropdown defaults to 1
+        self.rating_var.set(self.ratings[0])
         self.rating_input = tk.OptionMenu(self, self.rating_var, *self.ratings)
         self.rating_input.grid(column=2, row=5, pady=10)
         # watched toggle button
@@ -113,16 +92,34 @@ class Interface(ttk.Window):
         self.comments_input.grid(column=2, row=6, pady=10, padx=20)
         # submit button
         self.submit_button = ttk.Button(text="Submit", command=self.submit, bootstyle="info")
-        self.submit_button.grid(column=1, row=7, pady=10, padx=20, sticky='EW')
+        self.submit_button.grid(column=2, row=7, pady=10, padx=20, sticky='EW')
         # search button
-        self.search_button = ttk.Button(text="search", command=self.search, bootstyle="info-outline")
+        self.search_button = ttk.Button(text="search", command=db.query, bootstyle="info-outline")
         self.search_button.grid(column=1, row=9, pady=10)
         # search input box
         self.search_input = ttk.Entry(width=20)
+        self.search_input.insert(0, "search here...")
+        self.search_input.configure(foreground='gray')
         self.search_input.grid(column=0, row=9, pady=10, padx=20, sticky='ew')
+        self.search_input.bind("<FocusIn>", lambda event: self.clear_default_text())  # When focused, clear default text
+        self.search_input.bind("<FocusOut>", lambda event: self.restore_default_text())  # When focus is lost, restore default text
         # separator line to section off the search part
         self.sep = ttk.Separator(self, orient='horizontal', style="info")
         self.sep.grid(row=8, columnspan=3, pady=20, padx=20, sticky='EW')
+
+    def clear_default_text(self):
+        """clear 'search here...' text when user click on input field"""
+        if self.search_input.get() == "search here...":
+            # clear default text
+            self.search_input.delete(0, tk.END)
+            # change text color when user starts typing
+            self.search_input.configure(foreground='white')
+
+    def restore_default_text(self):
+        if not self.search_input.get():
+            self.search_input.insert(0, "search here...")
+            # change text color back to gray
+            self.search_input.configure(foreground='gray')
 
     def submit(self):
         """gets user input from input boxes/buttons. creates new Film object, saves data"""
@@ -143,30 +140,8 @@ class Interface(ttk.Window):
         self.title_input.delete(0, tk.END)
         self.year_input.delete(0, tk.END)
         self.director_input.delete(0, tk.END)
-        # self.rating_input.invoke() #TODO set 0
-        self.watched_input.invoke() # TODO TEST
+        self.rating_var.set(self.ratings[0])
         self.comments_input.delete(0, tk.END)
-
-    def search(self):
-        """searches data for user-supplied search-term"""
-        self.search_term = self.search_input.get()
-        print(f"[+] Searching for {self.search_term}...")
-        # clear the search bar when user presses submit
-        self.search_input.delete(0, tk.END)
-        try:
-            # try to read previous data
-            with open('films.json', 'r') as file:
-                data = json.load(file)
-                for i in data:
-                    if i in self.search_term:
-                        # display search results to user
-                        self.display_search_results(data=data[i], title=self.search_term)
-                    else:
-                        # display a popup that shows no results were found
-                        self.not_found()
-        # if the data file does not exist
-        except FileNotFoundError:
-            print("[-] No previous data found.")
 
     def not_found(self):
         """create popup message box to show that no results were found"""
@@ -180,15 +155,16 @@ class Interface(ttk.Window):
         # display the message box
         msgbox.show()
 
-    def display_search_results(self, data: dict, title: str):
+    def display_search_results(self, films: list[Film]):
         """Creates a pop-up message box showing found info from search query"""
+        message = ""
+        print(f"{films=}")
+        for f in films:
+            print(f)
+            print(f"{type(f)=}")
         # data to be displayed
-        message = f"""
-        title: {title}
-        year: {data["year"]}
-        director: {data["director"]}
-        comments: {data["comments"]}
-        """
+        # TODO make table
+        message = f"{f}"
         # create the message box
         msgbox = MessageDialog(
                 message=message,
@@ -202,63 +178,62 @@ class Interface(ttk.Window):
 # --------- SQL DATABASE ----------------------
 class Database():
     def __init__(self):
-        print("database init.")
-
         # create connection to database
         self.conn = sqlite3.connect('films.db')
         # Create a cursor object
         self.cur = self.conn.cursor()
 
     def create_database(self):
+        """create database if it does not exist"""
         self.cur.execute("CREATE TABLE IF NOT EXISTS film(title TEXT, year TEXT, director TEXT, rating INTEGER, watched INTEGER, comments TEXT)")
-        # self.cur.execute("CREATE TABLE IF NOT EXISTS film(id INTEGER PRIMARY KEY, title TEXT, year TEXT, director TEXT, rating INTEGER, watched INTEGER, comments TEXT)")
-        print("database created.")
+        print("[+] database created.")
 
     def query(self):
         """search database for user-supplied query"""
-        res = self.cur.execute("SELECT title from film")
-        print(res.fetchall())
-        print("query")
+        search_term = window.search_input.get()
+        # clear search query from search input when user hits search button
+        window.restore_default_text()
+        print(f"Searching for {search_term}...")
+        # TODO multiple results
+        res: list = self.cur.execute("SELECT * from film WHERE title = ?", (search_term,)).fetchall()
+        if res:
+            window.display_search_results(films=res)
+        else:
+            print("[-] not found.")
+            window.not_found()
 
     def insert_film(self, f: Film):
         """add new film to database"""
         # database fields are: id, title, yr, dir, rating, watched, comments
-
-        # self.cur.execute("""
-        # INSERT INTO film (title, year, director, rating, watched, comments) VALUES
-        #     ('Monty Python and the Holy Grail', "1975", "unknown", 5, 1, "neeeee")
-        # """)
-
-        # data = (
-
-        #     {
-        #         "title": f.title,
-        #         "year": f.year,
-        #         "director": f.director,
-        #         "rating": f.rating,
-        #         "watched": f.watched,
-        #         "comments": f.comments,
-        #      }
-        #         )
-
-        # self.cur.executemany("INSERT INTO film VALUES(:title, :year, :director, :rating, :watched, :comments)", data)
-
-        # save data
+        data = (
+            {
+                "title": f.title,
+                "year": f.year,
+                "director": f.director,
+                "rating": f.rating,
+                "watched": f.watched,
+                "comments": f.comments,
+             }
+                )
+        # insert data into database
+        self.cur.execute("INSERT INTO film VALUES(:title, :year, :director, :rating, :watched, :comments)", data)
+        # save changes
         self.conn.commit()
 
 
 # -------- MAIN LOOP -------------------
-
 # main program
 if __name__ == "__main__":
-  # create GUI window
-  window = Interface()
-  # initialize database
-  db = Database()
-  # create table in database
-  db.create_database()
-  # keep window open
-  window.mainloop()
-  # testing: query all entries
-  db.query()
+  try:
+    # initialize database
+    db = Database()
+    # create table in database
+    db.create_database()
+    # create GUI window
+    window = Interface()
+    # keep window open
+    window.mainloop()
+  # exit if program receives keyboard interrupt/ control-C
+  except KeyboardInterrupt:
+    print("\nGoodbye.\n")
 
