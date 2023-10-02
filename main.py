@@ -8,10 +8,14 @@ import sqlite3
 
 # styling and components for gui interface
 import tkinter as tk
-import ttkbootstrap as ttk
-from ttkbootstrap.dialogs import MessageDialog
 
-# TODO - multiple search results/next, encrypt data.
+# wrapper method to use with tkinter buttons
+from functools import partial
+from tkinter import messagebox
+
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
+from ttkbootstrap.tableview import Tableview
 
 
 class Film:
@@ -20,18 +24,47 @@ class Film:
         self.year:str = year
         self.director:str = director
         self.rating: int = rating
-        self.watched: int = int(watched)  # convert to int for sqlite3 which does not support boolean values
+        self.watched: str = "yes" if int(watched) else "no"  # convert boolean value to string
         self.comments:str = comments
 
-    def __repr__(self):
-        return f"""
-        title: {self.title}
-        year: {self.year}
-        director: {self.director}
-        watched: {self.watched}
-        rating: {self.rating}
-        comments: {self.comments}
-        """
+
+# ----------------- SQL DATABASE ----------------------
+class Database():
+    def __init__(self):
+        # create connection to database
+        self.conn = sqlite3.connect('films.db')
+        # Create a cursor object
+        self.cur = self.conn.cursor()
+
+    def create_database(self):
+        """create database if it does not already exist"""
+        self.cur.execute("CREATE TABLE IF NOT EXISTS film(title TEXT, year TEXT, director TEXT, rating INTEGER, watched INTEGER, comments TEXT)")
+        print("[+] database created.")
+
+    def query(self):
+        """search database for user-supplied query"""
+        thing = window.search_input.get()
+        print(f"searching for {thing}...\n")
+        rows = self.cur.execute("SELECT * FROM film WHERE title = ?", (thing,)).fetchall()
+        print(rows)
+
+    def insert_film(self, f: Film):
+        """add new film to database"""
+        # database fields are: id, title, yr, dir, rating, watched, comments
+        data = (
+            {
+                "title": f.title,
+                "year": f.year,
+                "director": f.director,
+                "rating": f.rating,
+                "watched": f.watched,
+                "comments": f.comments,
+             }
+                )
+        # insert data into database
+        self.cur.execute("INSERT INTO film VALUES(:title, :year, :director, :rating, :watched, :comments)", data)
+        # save changes
+        self.conn.commit()
 
 
 # this is the template for the GUI interface the user interacts with
@@ -41,8 +74,12 @@ class Interface(ttk.Window):
         # use "vapor" colorscheme
         super().__init__(themename="vapor")  # more themes: darkly, journal, cyborg,
         # set title of window
-        self.title("Movie Weasel")
+        self.title("movie weasel")
         # main "Add New Film" label
+
+    def add_screen(self):
+        """displays widgets on screen that allow user to enter film data"""
+        self.clear_widgets()
         self.main_label = ttk.Label(text="Add New Film", font=("Calibri", 24, "bold"))
         self.main_label.grid(column=1, row=0, pady=10)
         # label for 'film title' input box
@@ -64,7 +101,6 @@ class Interface(ttk.Window):
         # label for 'comments' input box
         self.comments_label = tk.Label(text="Comments", font=("Calibri", 14))
         self.comments_label.grid(column=0, row=6, pady=10, padx=20)
-
         # -------- INPUTS ------------------
         #title input box
         self.title_input = ttk.Entry(width=20)
@@ -80,8 +116,6 @@ class Interface(ttk.Window):
         # rating can be 1-5
         self.ratings = [1, 2, 3, 4, 5]
         self.rating_var = tk.IntVar()
-        # ratings dropdown defaults to 1
-        self.rating_var.set(self.ratings[0])
         self.rating_input = tk.OptionMenu(self, self.rating_var, *self.ratings)
         self.rating_input.grid(column=2, row=5, pady=10)
         # watched toggle button
@@ -91,35 +125,24 @@ class Interface(ttk.Window):
         self.comments_input = ttk.Entry(width=30)
         self.comments_input.grid(column=2, row=6, pady=10, padx=20)
         # submit button
-        self.submit_button = ttk.Button(text="Submit", command=self.submit, bootstyle="info")
-        self.submit_button.grid(column=2, row=7, pady=10, padx=20, sticky='EW')
-        # search button
-        self.search_button = ttk.Button(text="search", command=db.query, bootstyle="info-outline")
-        self.search_button.grid(column=1, row=9, pady=10)
+        self.submit_button = ttk.Button(text="Submit", command=self.submit, bootstyle="light")
+        self.submit_button.grid(column=1, row=7, pady=10, padx=20, sticky='EW')
         # search input box
-        self.search_input = ttk.Entry(width=20)
-        self.search_input.insert(0, "search here...")
-        self.search_input.configure(foreground='gray')
-        self.search_input.grid(column=0, row=9, pady=10, padx=20, sticky='ew')
-        self.search_input.bind("<FocusIn>", lambda event: self.clear_default_text())  # When focused, clear default text
-        self.search_input.bind("<FocusOut>", lambda event: self.restore_default_text())  # When focus is lost, restore default text
+        # self.search_input = ttk.Entry(width=20)
+        # self.search_input.grid(column=0, row=9, pady=10, padx=20, sticky='ew')
+        # search button
+        # command=partial(db.query, self.search_input.get()),
+        #self.search_button = ttk.Button(text="search", command=partial(db.query, (self.search_input.get(),)), bootstyle="info-outline")
+        self.search_button = ttk.Button(text="show data", command=self.show_data, bootstyle="secondary-outline")
+        self.search_button.grid(column=1, row=9, pady=10)
         # separator line to section off the search part
-        self.sep = ttk.Separator(self, orient='horizontal', style="info")
+        self.sep = ttk.Separator(self, orient='horizontal', style="light")
         self.sep.grid(row=8, columnspan=3, pady=20, padx=20, sticky='EW')
 
-    def clear_default_text(self):
-        """clear 'search here...' text when user click on input field"""
-        if self.search_input.get() == "search here...":
-            # clear default text
-            self.search_input.delete(0, tk.END)
-            # change text color when user starts typing
-            self.search_input.configure(foreground='white')
-
-    def restore_default_text(self):
-        if not self.search_input.get():
-            self.search_input.insert(0, "search here...")
-            # change text color back to gray
-            self.search_input.configure(foreground='gray')
+    def clear_widgets(self):
+        """clears all widgets from screen"""
+        for widget in self.winfo_children():
+            widget.destroy()
 
     def submit(self):
         """gets user input from input boxes/buttons. creates new Film object, saves data"""
@@ -140,85 +163,44 @@ class Interface(ttk.Window):
         self.title_input.delete(0, tk.END)
         self.year_input.delete(0, tk.END)
         self.director_input.delete(0, tk.END)
-        self.rating_var.set(self.ratings[0])
+        # self.rating_input.invoke() #TODO set 0
+        self.watched_input.invoke() # TODO TEST
         self.comments_input.delete(0, tk.END)
 
-    def not_found(self):
-        """create popup message box to show that no results were found"""
-        # create the message box
-        message = "No results found."
-        msgbox = MessageDialog(
-                message=message,
-                title="Not Found!",
-                buttons=["OK:success"],
-                padding=(50,50))
-        # display the message box
-        msgbox.show()
+    # def not_found(self):
+    #     """create popup message box to show that no results were found"""
+    #     # create the message box
+    #     messagebox.showinfo("Not Found!", "No results for that query.")
 
-    def display_search_results(self, films: list[Film]):
-        """Creates a pop-up message box showing found info from search query"""
-        message = ""
-        print(f"{films=}")
-        for f in films:
-            print(f)
-            print(f"{type(f)=}")
-        # data to be displayed
-        # TODO make table
-        message = f"{f}"
-        # create the message box
-        msgbox = MessageDialog(
-                message=message,
-                title="Found!",
-                buttons=["OK:success"],
-                padding=(50,50))
-        # display the message box
-        msgbox.show()
+    def show_data(self):
+       """clears home screen widgets and shows table of user's data"""
+       # clear screen
+       self.clear_widgets()
+       # home button
+       self.home_button = ttk.Button(text="Back", command=self.add_screen, bootstyle="light-outline")
+       self.home_button.grid(column=0, row=0, pady=10, padx=20, sticky='W')
 
+       films = db.cur.execute("SELECT * FROM film").fetchall()
+       coldata = [
+            {"text": "title", "stretch": True},
+            {"text": "year", "stretch": False, "width": 55},
+            {"text": "director", "stretch": False},
+            {"text": "rating", "stretch": False, "width": 55, "anchor": 'center'},
+            {"text": "seen", "stretch": False,"width": 75},
+            {"text": "comment", "stretch": True},
+        ]
+       rowdata = list(films)
 
-# --------- SQL DATABASE ----------------------
-class Database():
-    def __init__(self):
-        # create connection to database
-        self.conn = sqlite3.connect('films.db')
-        # Create a cursor object
-        self.cur = self.conn.cursor()
-
-    def create_database(self):
-        """create database if it does not exist"""
-        self.cur.execute("CREATE TABLE IF NOT EXISTS film(title TEXT, year TEXT, director TEXT, rating INTEGER, watched INTEGER, comments TEXT)")
-        print("[+] database created.")
-
-    def query(self):
-        """search database for user-supplied query"""
-        search_term = window.search_input.get()
-        # clear search query from search input when user hits search button
-        window.restore_default_text()
-        print(f"Searching for {search_term}...")
-        # TODO multiple results
-        res: list = self.cur.execute("SELECT * from film WHERE title = ?", (search_term,)).fetchall()
-        if res:
-            window.display_search_results(films=res)
-        else:
-            print("[-] not found.")
-            window.not_found()
-
-    def insert_film(self, f: Film):
-        """add new film to database"""
-        # database fields are: id, title, yr, dir, rating, watched, comments
-        data = (
-            {
-                "title": f.title,
-                "year": f.year,
-                "director": f.director,
-                "rating": f.rating,
-                "watched": f.watched,
-                "comments": f.comments,
-             }
-                )
-        # insert data into database
-        self.cur.execute("INSERT INTO film VALUES(:title, :year, :director, :rating, :watched, :comments)", data)
-        # save changes
-        self.conn.commit()
+       dt = Tableview(
+            master=self,
+            coldata=coldata,
+            rowdata=rowdata,
+            paginated=True,
+            searchable=True,
+            bootstyle=PRIMARY,
+        )
+       dt.grid(padx=10, pady=10, column=0, row=1)
+       dt.focus_set()
 
 
 # -------- MAIN LOOP -------------------
@@ -231,8 +213,12 @@ if __name__ == "__main__":
     db.create_database()
     # create GUI window
     window = Interface()
+    # show add new film screen
+    window.add_screen()
     # keep window open
     window.mainloop()
+    # close database
+    db.close()
   # exit if program receives keyboard interrupt/ control-C
   except KeyboardInterrupt:
     print("\nGoodbye.\n")
