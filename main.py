@@ -143,7 +143,7 @@ class Interface(ttk.Window):
 
         # separator line to section off the search part
         self.sep = ttk.Separator(self, orient='horizontal', style="light")
-        self.sep.grid(row=8, columnspan=3, pady=30, padx=30, sticky='EW')
+        self.sep.grid(row=8, columnspan=3, pady=20, padx=30, sticky='EW')
 
     def clear_widgets(self):
         """clears all widgets from screen"""
