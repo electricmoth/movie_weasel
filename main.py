@@ -45,11 +45,15 @@ class Database():
         """search database for user-supplied query"""
         thing = window.search_input.get()
         print(f"searching for {thing}...\n")
-        rows = self.cur.execute("SELECT * FROM film WHERE title = ?", (thing,)).fetchall()
-        print(rows)
+        try:
+            rows = self.cur.execute("SELECT * FROM film WHERE title = ?", (thing,)).fetchall()
+        except sqlite3.Error as e:
+            print(e)
+        else:
+            print(rows)
 
     def insert_film(self, f: Film):
-        """add new film to database"""
+        """add new film to databa se"""
         # database fields are: id, title, yr, dir, rating, watched, comments
         data = (
             {
@@ -62,9 +66,13 @@ class Database():
              }
                 )
         # insert data into database
-        self.cur.execute("INSERT INTO film VALUES(:title, :year, :director, :rating, :watched, :comments)", data)
-        # save changes
-        self.conn.commit()
+        try:
+            self.cur.execute("INSERT INTO film VALUES(:title, :year, :director, :rating, :watched, :comments)", data)
+        except sqlite3.Error as e:
+            print(e)
+        else:
+            # save changes
+            self.conn.commit()
 
 
 # this is the template for the GUI interface the user interacts with
@@ -167,10 +175,10 @@ class Interface(ttk.Window):
         self.watched_input.invoke() # TODO TEST
         self.comments_input.delete(0, tk.END)
 
-    # def not_found(self):
-    #     """create popup message box to show that no results were found"""
-    #     # create the message box
-    #     messagebox.showinfo("Not Found!", "No results for that query.")
+    def error_message(self):
+        """create popup message box in case of error"""
+        # create the message box
+        messagebox.showinfo("Error", "Movie Weasel encountered an error.")
 
     def show_data(self):
        """clears home screen widgets and shows table of user's data"""
@@ -180,27 +188,32 @@ class Interface(ttk.Window):
        self.home_button = ttk.Button(text="Back", command=self.add_screen, bootstyle="light-outline")
        self.home_button.grid(column=0, row=0, pady=10, padx=20, sticky='W')
 
-       films = db.cur.execute("SELECT * FROM film").fetchall()
-       coldata = [
-            {"text": "title", "stretch": True},
-            {"text": "year", "stretch": False, "width": 55},
-            {"text": "director", "stretch": False},
-            {"text": "rating", "stretch": False, "width": 55, "anchor": 'center'},
-            {"text": "seen", "stretch": False,"width": 75},
-            {"text": "comment", "stretch": True},
-        ]
-       rowdata = list(films)
+       try:
+           films = db.cur.execute("SELECT * FROM film").fetchall()
+       except sqlite3.Error as e:
+           print(e)
+           self.error_message()
+       else:
+           coldata = [
+                {"text": "title", "stretch": True},
+                {"text": "year", "stretch": False, "width": 55},
+                {"text": "director", "stretch": False},
+                {"text": "rating", "stretch": False, "width": 55, "anchor": 'center'},
+                {"text": "seen", "stretch": False,"width": 75},
+                {"text": "comment", "stretch": True},
+            ]
+           rowdata = list(films)
 
-       dt = Tableview(
-            master=self,
-            coldata=coldata,
-            rowdata=rowdata,
-            paginated=True,
-            searchable=True,
-            bootstyle=PRIMARY,
-        )
-       dt.grid(padx=10, pady=10, column=0, row=1)
-       dt.focus_set()
+           dt = Tableview(
+                master=self,
+                coldata=coldata,
+                rowdata=rowdata,
+                paginated=True,
+                searchable=True,
+                bootstyle=PRIMARY,
+            )
+           dt.grid(padx=10, pady=10, column=0, row=1)
+           dt.focus_set()
 
 
 # -------- MAIN LOOP -------------------
