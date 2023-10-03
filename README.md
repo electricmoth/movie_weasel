@@ -2,7 +2,7 @@
 
 Movie Weasel is a privacy-respecting Python application for managing a movie database with a graphical user interface (GUI).
 Users can add, view, and search for movies in the database, along with additional details like director, rating, and comments.
-The database is stored locally and no data whatsoever is transmitted. 
+The database is stored locally and no data whatsoever is transmitted.
 
 This project is a work in progress and currently lacking edit/delete features for the database.
 It is also a project for school.
@@ -29,10 +29,12 @@ Clone the repository:
    cd movie-weasel
    ```
 Create a virtual environment (optional but recommended):
+
     ```shell
     python -m venv venv
-    source venv/bin/activate  
+    source venv/bin/activate
     ```
+
 Install the required packages:
     `pip install -r requirements.txt`
 
@@ -47,10 +49,10 @@ Follow the on-screen instructions to add new movies, view existing movies, and s
 
 ## Features
 
-    Add movies to the database with details like title, year, director, rating, and comments.
-    View a table of all movies in the database.
-    Search for movies by any text in the database.
-    Simple GUI with Bootstrap-based styling.
+Add movies to the database with details like title, year, director, rating, and comments.
+View a table of all movies in the database.
+Search for movies by any text in the database.
+Simple GUI with Bootstrap-based styling.
 
 
 ## License

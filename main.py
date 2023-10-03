@@ -7,29 +7,15 @@
 import sqlite3
 
 # styling and components for gui interface
-import tkinter as tk
-
-# wrapper method to use with tkinter buttons
-from functools import partial
 from tkinter import messagebox
-
+import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from ttkbootstrap.tableview import Tableview
+from film import Film
 
 
-class Film:
-    def __init__(self, title, year, director, rating, watched, comments):
-        self.title:str = title
-        self.year:str = year
-        self.director:str = director
-        self.rating: int = rating
-        self.watched: str = "yes" if int(watched) else "no"  # convert boolean value to string
-        self.comments:str = comments
-
-
-# ----------------- SQL DATABASE ----------------------
-class Database():
+class Database:
     def __init__(self):
         # create connection to database
         self.conn = sqlite3.connect('films.db')
@@ -75,8 +61,9 @@ class Database():
             self.conn.commit()
 
 
-# this is the template for the GUI interface the user interacts with
 class Interface(ttk.Window):
+    """this is the template for the GUI interface the user interacts with"""
+
     def __init__(self):
         """initialize instance of Interface, which extends the Tkinter window"""
         # use "vapor" colorscheme
@@ -112,7 +99,7 @@ class Interface(ttk.Window):
         self.comments_label = tk.Label(text="Comments", font=("Calibri", 14))
         self.comments_label.grid(column=0, row=6, pady=10, padx=30)
         # -------- INPUTS ------------------
-        #title input box
+        # title input box
         self.title_input = ttk.Entry(width=20)
         self.title_input.grid(column=1, row=1, pady=10)
         self.title_input.focus()
@@ -176,42 +163,43 @@ class Interface(ttk.Window):
         self.year_input.delete(0, tk.END)
         self.director_input.delete(0, tk.END)
         # self.rating_input.invoke() #TODO set 0
-        self.watched_input.invoke() # TODO TEST
+        self.watched_input.invoke()  # TODO TEST
         self.comments_input.delete(0, tk.END)
 
-    def error_message(self):
+    @staticmethod
+    def error_message():
         """create popup message box in case of error"""
         # create the message box
         messagebox.showinfo("Error", "Movie Weasel encountered an error.")
 
     def show_data(self):
-       """clears home screen widgets and shows table of user's data"""
-       # clear screen
-       self.clear_widgets()
-       # home button
-       self.home_button = ttk.Button(text="Back", command=self.add_screen, bootstyle="light-outline")
-       self.home_button.grid(column=0, row=0, pady=10, padx=20, sticky='W')
+        """clears home screen widgets and shows table of user's data"""
+        # clear screen
+        self.clear_widgets()
+        # home button
+        self.home_button = ttk.Button(text="Back", command=self.add_screen, bootstyle="light-outline")
+        self.home_button.grid(column=0, row=0, pady=10, padx=20, sticky='W')
 
-       try:
-           # try to read data from database
-           films = db.cur.execute("SELECT * FROM film").fetchall()
-       except sqlite3.Error as e:
-           # catch errors
-           print(e)
-           self.error_message()
-       else:
-           # get data for columns
-           coldata = [
+        try:
+            # try to read data from database
+            films = db.cur.execute("SELECT * FROM film").fetchall()
+        except sqlite3.Error as e:
+            # catch errors
+            print(e)
+            self.error_message()
+        else:
+            # get data for columns
+            coldata = [
                 {"text": "title", "stretch": True},
                 {"text": "year", "stretch": False, "width": 55},
                 {"text": "director", "stretch": False},
                 {"text": "rating", "stretch": False, "width": 55, "anchor": 'center'},
-                {"text": "seen", "stretch": False,"width": 75},
+                {"text": "seen", "stretch": False, "width": 75},
                 {"text": "comment", "stretch": True},
             ]
-           rowdata = list(films)
+            rowdata = list(films)
 
-           dt = Tableview(
+            dt = Tableview(
                 master=self,
                 coldata=coldata,
                 rowdata=rowdata,
@@ -219,8 +207,8 @@ class Interface(ttk.Window):
                 searchable=True,
                 bootstyle=PRIMARY,
             )
-           dt.grid(padx=20, pady=20, column=0, row=1)
-           dt.focus_set()
+            dt.grid(padx=20, pady=20, column=0, row=1)
+            dt.focus_set()
 
 
 # -------- MAIN LOOP -------------------
@@ -240,7 +228,6 @@ if __name__ == "__main__":
         # close database
         db.cur.close()
         db.conn.close()
-  # exit if program receives keyboard interrupt/ control-C
+    # exit if program receives keyboard interrupt/ control-C
     except KeyboardInterrupt:
         print("\nGoodbye.\n")
-
