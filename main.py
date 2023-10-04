@@ -25,7 +25,40 @@ class Interface(ttk.Window):
         # use "vapor" colorscheme
         super().__init__(themename="vapor")  # more themes: darkly, journal, cyborg,
         # set title of window
+        self.dt = None
+        self.coldata, self.rowdata = self.read_data()
         self.title("movie weasel")
+
+        self.dt = Tableview(
+            master=self,
+            coldata=self.coldata,
+            rowdata=self.rowdata,
+            paginated=True,
+            searchable=True,
+            bootstyle=PRIMARY,
+        )
+
+    def read_data(self) -> (list, list):
+        try:
+            # try to read data from database
+            films = db.cur.execute("SELECT * FROM film").fetchall()
+        except sqlite3.Error as e:
+            # catch errors
+            print(e)
+            self.error_message()
+        else:
+            # get data for columns
+            self.coldata = [
+                {"text": "ID", "stretch": False, "width": 55},
+                {"text": "title", "stretch": True},
+                {"text": "year", "stretch": False, "width": 55},
+                {"text": "director", "stretch": False},
+                {"text": "rating", "stretch": False, "width": 55, "anchor": 'center'},
+                {"text": "seen", "stretch": False, "width": 75},
+                {"text": "comment", "stretch": True},
+            ]
+            self.rowdata = list(films)
+            return self.coldata, self.rowdata
 
     def add_screen(self):
         """displays widgets on screen that allow user to enter film data"""
@@ -134,37 +167,32 @@ class Interface(ttk.Window):
         self.clear_widgets()
         # home button
         self.home_button = ttk.Button(text="Back", command=self.add_screen, bootstyle="light-outline")
-        self.home_button.grid(column=0, row=0, pady=10, padx=20, sticky='W')
+        self.home_button.grid(column=0, row=0, pady=10, padx=10, sticky='W')
+        self.del_button = ttk.Button(text="Delete", command=self.delete_film, bootstyle="light-outline")
+        self.del_button.grid(column=1, row=0, pady=10, padx=10, sticky='W')
 
-        try:
-            # try to read data from database
-            films = db.cur.execute("SELECT * FROM film").fetchall()
-        except sqlite3.Error as e:
-            # catch errors
-            print(e)
-            self.error_message()
-        else:
-            # get data for columns
-            coldata = [
-                {"text": "title", "stretch": True},
-                {"text": "year", "stretch": False, "width": 55},
-                {"text": "director", "stretch": False},
-                {"text": "rating", "stretch": False, "width": 55, "anchor": 'center'},
-                {"text": "seen", "stretch": False, "width": 75},
-                {"text": "comment", "stretch": True},
-            ]
-            rowdata = list(films)
+        # refresh data
+        self.coldata, self.rowdata = self.read_data()
 
-            dt = Tableview(
-                master=self,
-                coldata=coldata,
-                rowdata=rowdata,
-                paginated=True,
-                searchable=True,
-                bootstyle=PRIMARY,
-            )
-            dt.grid(padx=20, pady=20, column=0, row=1)
-            dt.focus_set()
+        self.dt = Tableview(
+            master=self,
+            coldata=self.coldata,
+            rowdata=self.rowdata,
+            paginated=True,
+            searchable=True,
+            bootstyle=PRIMARY,
+        )
+        self.dt.grid(padx=20, pady=20, column=0, row=1)
+        self.dt.focus_set()
+
+    def edit_film(self, f: Film):
+        pass
+
+    def delete_film(self):
+        selected = self.dt.get_rows(selected=True)
+        for f in selected:
+            db.delete_film(f.values[0])
+        self.show_data()
 
 
 # -------- MAIN LOOP -------------------
